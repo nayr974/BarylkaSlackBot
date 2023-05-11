@@ -7,88 +7,50 @@ from requests.auth import HTTPBasicAuth
 import os
 from datetime import datetime
 
-JIRA_TOKEN = os.environ['JIRA_TOKEN']
-
 import azure.functions as func
 from utils import get_github_api, post_message
 
+GITLAB_TOKEN = os.environ['GITLAB_TOKEN']
+
 def main(mytimer: func.TimerRequest) -> None:
-    ############ PRS
-    api = get_github_api()
-    github_results = api.search.issues_and_pull_requests(q='is:open is:pr label:"Ready for Review" archived:false author:nayr974 author:ColbySong author:ashleyyy author:Karanveer-singh671 author:nasser-31 author:irishic author:mmrlivingstone', order='desc')
 
+    repos = ["cellar-utilities", "cellar-bootstrap", "cellar-ecom-fe", "cellar-ecom-html", "cellar-ecom-web", "cellar-getcellar-site", "cellar-ios", "cellar-mobile", "cellar-pos-html", "cellar-pos-ios", "core-api", "core-html", "customer-html", "therapy-html"]
+    link_count = 0
     links = ""
-    for item in github_results["items"]:
-        links += f"\n><{item.pull_request.html_url}|{item.title[:75] + '...' if len(item.title) > 78 else item.title}>"
 
-    ############ Sprint Data
-    response = requests.get("https://thinkific.atlassian.net/rest/agile/1.0/board/422/sprint",
-	headers={"Authorization": f"Basic {JIRA_TOKEN}"})
-    sprint_id = list(response.json()["values"])[-1]["id"]
-    sprint_name = list(response.json()["values"])[-1]["name"]
-    sprint_goal = list(response.json()["values"])[-1]["goal"].replace('\n', ' ')
-    sprint_start = datetime.strptime(list(response.json()["values"])[-1]["startDate"], "%Y-%m-%dT%H:%M:%S.%fZ")
-    sprint_end = datetime.strptime(list(response.json()["values"])[-1]["endDate"], "%Y-%m-%dT%H:%M:%S.%fZ")
-    days_remaining = np.busday_count(datetime.utcnow().date(), sprint_end.date()) +1
+    for repo in repos:
+        response = requests.get(f"https://gitlab.com/api/v4/projects/cellarco%2F{repo}/merge_requests?state=opened",
+        headers={"Authorization": f"Bearer {GITLAB_TOKEN}"})
 
-    #response = requests.get(f"https://thinkific.atlassian.net/rest/greenhopper/1.0/rapid/charts/scopechangeburndownchart?rapidViewId=421&sprintId={sprint_id}",
-	#headers={"Authorization": f"Basic {JIRA_TOKEN}"})
-    #scopeChangeBurndownChart = response.json()
+        merge_requests = list(response.json())
 
-    response = requests.get(f"https://thinkific.atlassian.net/rest/agile/1.0/sprint/{sprint_id}/issue",
-    headers={"Authorization": f"Basic {JIRA_TOKEN}"})
-    issues = list(response.json()["issues"])
-    totalIssues = response.json()["total"]
-    totalPoints = 0
-    totalPointsDone = 0
-    totalIssuesDone = 0
+        if len(merge_requests) > 0:
+            links += f"\n*{repo}*"
 
-    for issue in issues:
-        if issue["fields"]["status"]["name"] == "Done" or issue["fields"]["status"]["name"] == "Not today, Satan." :
-            totalIssuesDone = totalIssuesDone + 1
-            if issue["fields"]["customfield_10026"]:
-                totalPointsDone = int(totalPointsDone + issue["fields"]["customfield_10026"])
-        if issue["fields"]["customfield_10026"]:
-            totalPoints = totalPoints + int(issue["fields"]["customfield_10026"])
+        for merge_request in merge_requests:        
+            links += f"\n><{merge_request['web_url']}|{merge_request['author']['name']} - {merge_request['title'][:75] + '...' if len(merge_request['title']) > 78 else merge_request['title']}>"
+            link_count = link_count + 1
 
-
-    ############### BUILD MESSAGE
     blocks = [{
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": f"Totoro Daily Summary"
+                "text": f"Barylka's Daily Bark"
             }
         }]
-
+    
     blocks.append({
         "type": "section",
         "text": {
             "type": "mrkdwn",
-            "text": f":run: *{sprint_name}*\n>Goal: {sprint_goal}\n>\n><https://thinkific.atlassian.net/jira/software/c/projects/TOTO/boards/422|Sprint Board>   <https://thinkific.atlassian.net/jira/software/c/projects/TOTORO/boards/422/reports/burnup-char|Burnup Chart>    <https://thinkific.atlassian.net/jira/software/c/projects/TOTORO/boards/422/reports/velocity-chart|Velocity Report>\n>{days_remaining} work days remaining    {totalIssuesDone}/{totalIssues} items done    {totalPointsDone}/{totalPoints} story points done"
-        }
-    })
-
-    blocks.append({
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": f":pencil: *Huddle notes in this thread!*\n>Please add your notes by 10am PT."
-        }
-    })
-        
-    blocks.append({
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": f":blob_wave: *{github_results.total_count} PR's are _Ready for Review_ today!*{links}\n\n<!subteam^S032EF67EUS>"
+            "text": f"{':blob_wave:' if link_count > 0 else ':blob_neutral:'} *{link_count} MR's are _Ready for Review_ today{'! :excited-dog:' if link_count > 0 else '.'}*\n{links}\n\n"
         },
         "accessory": {
             "type": "image",
-            "image_url": "https://soranews24.com/wp-content/uploads/sites/3/2020/08/My-Neighbor-Totoro-anime-storyboard-book-Hayao-Miyazaki-art-Japanese-neighbour-Japan-pictures-news-1.jpg",
-            "alt_text": "totoro"
+            "image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbnZHJAEbcFxRub03cMAKT2oMNT8kkS5zYAz7z9Qgo1rZgnNSVjoIGGaPkaze5KHrkJuQ&usqp=CAU",
+            "alt_text": "barylka"
         }
     })
 
-    post_message("#team-totoro-test", text="Totoro Daily Summary", blocks=blocks)
+    post_message("#team_barylka", text="Daily Bark", blocks=blocks)
  

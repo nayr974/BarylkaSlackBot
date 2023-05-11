@@ -62,6 +62,7 @@ def delete_message(channel, ts):
         assert e.response["error"] 
 
 def post_message(channel, text=None, blocks=None):
+    logging.info(BOT_TOKEN)
     try:
         client.chat_postMessage(
             channel=channel,
