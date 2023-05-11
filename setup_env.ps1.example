@@ -1,0 +1,4 @@
+$env:STORAGE_URL=''
+$env:STORAGE_TOKEN=''
+$env:BOT_TOKEN=''
+$env:GITHUB_TOKEN=''
