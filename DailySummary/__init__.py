@@ -14,7 +14,7 @@ GITLAB_TOKEN = os.environ['GITLAB_TOKEN']
 
 def main(mytimer: func.TimerRequest) -> None:
 
-    repos = ["cellar-utilities", "cellar-bootstrap", "cellar-ecom-fe", "cellar-ecom-html", "cellar-ecom-web", "cellar-getcellar-site", "cellar-ios", "cellar-mobile", "cellar-pos-html", "cellar-pos-ios", "core-api", "core-html", "customer-html", "therapy-html"]
+    repos = ["cellar-utilities", "cellar-bootstrap", "cellar-ecom-fe", "cellar-ecom-html", "cellar-ecom-web", "cellar-getcellar-site", "cellar-ios", "cellar-mobile", "cellar-pos-html", "cellar-pos-ios", "core-api", "core-html", "customer-html", "therapy-html", "ecom-front"]
     link_count = 0
     links = ""
 
