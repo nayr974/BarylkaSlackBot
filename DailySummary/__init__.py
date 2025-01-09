@@ -11,6 +11,7 @@ import azure.functions as func
 from utils import get_github_api, post_message
 
 GITLAB_TOKEN = os.environ['GITLAB_TOKEN']
+SHORTCUT_TOKEN = os.environ['SHORTCUT_TOKEN']
 
 def main(mytimer: func.TimerRequest) -> None:
 
@@ -24,12 +25,23 @@ def main(mytimer: func.TimerRequest) -> None:
 
         merge_requests = list(response.json())
 
-        if len(merge_requests) > 0:
+        show_repo = False
+        for merge_request in merge_requests:        
+            if 'Andrey Lykov' not in merge_request['author']['name'] and 'Sabina Ashrafova' not in merge_request['author']['name'] and 'Álvaro Lázaro' not in merge_request['author']['name']:
+                show_repo = True
+
+        if show_repo and len(merge_requests) > 0:
             links += f"\n*{repo}*"
 
         for merge_request in merge_requests:        
-            links += f"\n><{merge_request['web_url']}|{merge_request['author']['name']} - {merge_request['title'][:75] + '...' if len(merge_request['title']) > 78 else merge_request['title']}>"
-            link_count = link_count + 1
+            if 'Andrey Lykov' not in merge_request['author']['name'] and 'Sabina Ashrafova' not in merge_request['author']['name'] and 'Álvaro Lázaro' not in merge_request['author']['name']:
+                links += f"\n><{merge_request['web_url']}|{merge_request['author']['name']} - {merge_request['title'][:75] + '...' if len(merge_request['title']) > 78 else merge_request['title']}>"
+                link_count = link_count + 1
+
+    response = requests.get(f"https://api.app.shortcut.com/api/v3/workflows/500000005",
+    headers={"Shortcut-Token": f"{SHORTCUT_TOKEN}"})
+
+    workflow = response.json()
 
     blocks = [{
             "type": "header",
@@ -43,7 +55,7 @@ def main(mytimer: func.TimerRequest) -> None:
         "type": "section",
         "text": {
             "type": "mrkdwn",
-            "text": f"{':blob_wave:' if link_count > 0 else ':blob_neutral:'} *{link_count} MR's are _Ready for Review_ today{'! :excited-dog:' if link_count > 0 else '.'}*\n{links}\n\n"
+            "text": f"*:shortcut: <https://app.shortcut.com/cellar-1/stories/space/433/everything|Shortcut Board>*\n*{workflow['states'][2]['num_stories']}* items _In Progress_ | *{workflow['states'][4]['num_stories']}* items _In QA_ | *{workflow['states'][5]['num_stories']}* items _Blocked_\n\n\n{':blob_wave:' if link_count > 0 else ':blob_neutral:'} *{link_count} MR's are _Ready for Review_ today{'! :excited-dog:' if link_count > 0 else '.'}*\n{links}\n\n"
         },
         "accessory": {
             "type": "image",
@@ -53,4 +65,3 @@ def main(mytimer: func.TimerRequest) -> None:
     })
 
     post_message("#team_barylka", text="Daily Bark", blocks=blocks)
- 
